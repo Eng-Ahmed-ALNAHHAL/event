@@ -28,4 +28,4 @@ He cannot modify the movie or create new movies..
 I relied on Firebase as a database for specific things and on Rest API
 I relied on Cubit to manage cases..
 API source
-https://github.com/hmoodaps/events_manage_api.git
+https://github.com/hmoodaps/events_manage_api.git# event
