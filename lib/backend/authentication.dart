@@ -7,12 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../state_management/cubit.dart';
 import '../state_management/states.dart';
 
-
-
-
-
 class Auth extends StatelessWidget {
-  const Auth ({super.key});
+  const Auth({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -22,11 +18,10 @@ class Auth extends StatelessWidget {
         return StreamBuilder<User?>(
           stream: FirebaseAuth.instance.authStateChanges(),
           builder: (context, snapshot) {
-            if (snapshot.hasData ) {
+            if (snapshot.hasData) {
               return const MainPage();
             }
             return Login();
-
           },
         );
       },

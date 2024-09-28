@@ -145,14 +145,12 @@ class _AddReservationState extends State<AddReservation> {
                           text: TextSpan(
                             children: <TextSpan>[
                               TextSpan(
-                                text:
-                                    '${AppTexts.totalPayment.padRight(AppDimensions.m20)} : ',
-                                style: AppTextStyles.labelStyleOrange, // النمط الأول
+                                text: '${AppTexts.totalPayment.padRight(AppDimensions.m20)} : ',
+                                style: AppTextStyles.labelStyleOrange,
                               ),
                               TextSpan(
-                                text:
-                                    '${(widget.movie.ticketPrice! * int.parse(reservationsController.text)).toString()} \$\n',
-                                style: AppTextStyles.labelStyle, // النمط الثاني
+                                text: '${(widget.movie.ticketPrice! * (int.tryParse(reservationsController.text) ?? 0)).toString()} \$\n',
+                                style: AppTextStyles.labelStyle,
                               ),
                             ],
                           ),

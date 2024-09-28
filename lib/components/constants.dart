@@ -247,21 +247,32 @@ ThemeData? light = myTheme(
   ifIconPressingColor: Colors.grey,
 );
 
-navigatorTo(context, nextPage) {
-  Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => nextPage,
-      ));
+Future<void> navigatorTo(context, nextPage) async {
+ await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => nextPage,
+    ),
+  );
 }
 
-navigatorReplace(context, nextPage) {
-  Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => nextPage,
-      ));
+Future<void> navigatorReplace(context, nextPage) async{
+  await Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (context) => nextPage,
+    ),
+  );
 }
+
+Future<void> navigatorToFirstPage(context, firstPage)async {
+  await Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (context) => firstPage),
+        (Route<dynamic> route) => false, // هذا سيحذف جميع الصفحات السابقة
+  );
+}
+
 
 class CustomShape extends CustomPainter {
   @override

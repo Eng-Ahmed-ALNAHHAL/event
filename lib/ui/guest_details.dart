@@ -1,3 +1,4 @@
+import 'package:cinema/main.dart';
 import 'package:cinema/models/ticket.dart';
 import 'package:cinema/state_management/cubit.dart';
 import 'package:cinema/state_management/states.dart';
@@ -191,8 +192,9 @@ class _GuestDetailsState extends State<GuestDetails> {
                                             seats: selectedSeats,
                                             movieId:
                                                 widget.reservation.movie!.id!, age: int.parse(_ageController.text), reservation: widget.reservation)
-                                        .then((value) {
+                                        .then((value) async {
                                       cub.editingGuest();
+                                      await navigatorToFirstPage(context,const MyApp() );
                                     });
                                   } else {
                                     cub.editingGuest();
@@ -357,6 +359,7 @@ class _GuestDetailsState extends State<GuestDetails> {
                               controller: _reservationsController,
                               onChanged: (value) {
                                 setState(() {
+
                                   maxSeats = int.tryParse(value) ?? 1;
                                   int reservations = int.tryParse(value) ?? 1;
                                   _totalPaymentController.text =

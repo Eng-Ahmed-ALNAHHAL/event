@@ -1,144 +1,115 @@
-import 'dart:io';
-
-import 'package:cinema/backend/dio.dart'; // Importing custom Dio helper for handling API requests
-import 'package:cinema/backend/shared_pref.dart'; // Importing shared preferences helper for local data storage
-import 'package:cinema/models/guest.dart'; // Importing the Guest model class
-import 'package:cinema/models/movie.dart'; // Importing the Movie model class
+import 'dart:io';import 'dart:io';
+import 'package:cinema/backend/dio.dart';
+import 'package:cinema/backend/shared_pref.dart';
+import 'package:cinema/models/guest.dart';
+import 'package:cinema/models/movie.dart';
 import 'package:cinema/models/ticket.dart';
-import 'package:cinema/state_management/states.dart'; // Importing different app states used by the Cubit
+import 'package:cinema/state_management/states.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Importing Firebase Authentication for user login
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart'; // Importing foundation utilities like debug mode check (kDebugMode)
-import 'package:flutter/material.dart'; // Importing Flutter’s material design components
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pdfFile;
 
-import '../components/constants.dart'; // Importing Bloc for state management
+import '../components/constants.dart';
 
 class CubitClass extends Cubit<AppState> {
-  CubitClass()
-      : super(
-            InitCubit()); // Initializing the Cubit with the initial state (InitCubit)
+  CubitClass() : super(InitCubit());
 
-  // Creating a static instance of the Cubit class for easy access throughout the app
   static CubitClass get(context) => BlocProvider.of<CubitClass>(context);
 
-  // Toggle between light and dark mode based on device brightness settings
-  ThemeData? themeData = light; // Default theme is seat to light mode
-  bool isDark = false; // Boolean to track if the app is in dark mode
+  ThemeData? themeData = light;
+  bool isDark = false;
 
-  // Method to toggle between light and dark theme based on system settings
+  /// Toggles between light and dark themes based on system preference.
   ThemeData? toggleLightAndDark(context) {
-    Brightness brightness = MediaQuery.of(context)
-        .platformBrightness; // Check current system brightness
+    Brightness brightness = MediaQuery.of(context).platformBrightness;
     brightness == Brightness.dark
-        ? (
-            themeData = dark,
-            isDark = true
-          ) // If system is in dark mode, apply dark theme
-        : (themeData = light, isDark = false); // Else, apply light theme
-    emit(ToggleLightAndDark()); // Emit the state change to notify listeners
-    return themeData; // Return the theme data to update the UI
+        ? (themeData = dark, isDark = true)
+        : (themeData = light, isDark = false);
+    emit(ToggleLightAndDark());
+    return themeData;
   }
 
-  // Firebase Authentication instance for handling login
   final _auth = FirebaseAuth.instance;
 
-  // Method to handle Firebase login using email and password
+  /// Authenticates the user with Firebase using email and password.
   Future<void> firebaseLogin({
-    required String email, // User email for login
-    required String password, // User password for login
+    required String email,
+    required String password,
   }) async {
-    await _auth
-        .signInWithEmailAndPassword(
-            email: email, password: password) // Sign in using Firebase
+    await _auth.signInWithEmailAndPassword(email: email, password: password)
         .then((value) {
-      SharedPref.setBoolData('isLogin',
-          true); // Set login state in shared preferences after successful login
+      SharedPref.setBoolData('isLogin', true);
     });
   }
-  Future<void> firebaseLogOut()async {
+
+  /// Logs the user out from Firebase.
+  Future<void> firebaseLogOut() async {
     await _auth.signOut();
     emit(FirebaseLogOut());
   }
 
-  // Handling API requests for fetching guest data
-  List<Guest> guests = []; // List to store guests fetched from the API
+  List<Guest> guests = [];
 
-  // Method to fetch guest data from API using DioHelper
-  Future<void> getGuests()async {
-    guests.clear(); // Clear the current list before fetching new data
-   await DioHelper.getData('viewsets/guests/').then((value) {
-      var responseData = value!.data; // Parse the response data from API
+  /// Retrieves the list of guests from the backend.
+  Future<void> getGuests() async {
+    guests.clear();
+    await DioHelper.getData('viewsets/guests/').then((value) {
+      var responseData = value!.data;
       for (var item in responseData) {
-        item = Guest.fromJson(item); // Convert each item to a Guest object
-        guests.add(item); // Add each guest to the list
+        guests.add(Guest.fromJson(item));
       }
-      emit(
-          GetGuests()); // Emit the state to notify the app that guests have been fetched
-      if (kDebugMode) {
-        print(
-            'Guests Loaded: ${guests.length}'); // Debug log showing the number of guests loaded
-      }
+      emit(GetGuests());
+      if (kDebugMode) print('Guests Loaded: ${guests.length}');
     }).catchError((error) {
-      if (kDebugMode) {
-        print('Error Guest:  $error'); // Log error if the API request fails
-      }
+      if (kDebugMode) print('Error Guest: $error');
     });
   }
 
-  // Handling API requests for fetching movie data
-  List<Movie> movies = []; // List to store movies fetched from the API
+  List<Movie> movies = [];
 
-  // Method to fetch movie data from API using DioHelper
-  Future<void> getMovies() async{
-    movies.clear(); // Clear the current list before fetching new data
+  /// Fetches the list of movies from the backend.
+  Future<void> getMovies() async {
+    movies.clear();
     await DioHelper.getData('viewsets/movies/').then((value) {
-      var responseData = value!.data; // Parse the response data from API
+      var responseData = value!.data;
       for (var item in responseData) {
-        var movie = Movie.fromJson(item); // Convert each item to a Movie object
-        movies.add(movie); // Add each movie to the list
+        movies.add(Movie.fromJson(item));
       }
-      emit(
-          GetMovies()); // Emit the state to notify the app that movies have been fetched
-      if (kDebugMode) {
-        print(
-            'Movies Loaded: ${movies.length}'); // Debug log showing the number of movies loaded
-      }
+      emit(GetMovies());
+      if (kDebugMode) print('Movies Loaded: ${movies.length}');
     }).catchError((error) {
-      if (kDebugMode) {
-        print('Error Movies: $error'); // Log error if the API request fails
-      }
+      if (kDebugMode) print('Error Movies: $error');
     });
   }
 
   List<Reservation> reservations = [];
 
-  Future<void> getReservations()async {
+  /// Retrieves all reservations from the backend.
+  Future<void> getReservations() async {
     reservations.clear();
-   await DioHelper.getData('viewsets/reservations/').then((response) {
-      // تحليل البيانات من الـ JSON وتحويلها إلى كائنات Dart
+    await DioHelper.getData('viewsets/reservations/').then((response) {
       if (response != null && response.data != null) {
-        // تحويل كل عنصر في القائمة القادمة من الـ JSON إلى كائن Reservation
         for (var item in response.data) {
           reservations.add(Reservation.fromJson(item));
         }
         print('Reservations loaded: ${reservations.length}');
-        emit(GetReservations()); // عرض الحالة الجديدة
+        emit(GetReservations());
       }
     }).catchError((e) {
-      if (kDebugMode) {
-        print('Error Reservations : ${e.toString()}');
-      }
+      if (kDebugMode) print('Error Reservations: ${e.toString()}');
     });
   }
 
   List<Reservation> filteredReservations = [];
 
+  /// Filters reservations by movie ID.
   Future<void> filterReservationsByMovie(int movieId) async {
     filteredReservations.clear();
     for (Reservation reservation in reservations) {
@@ -151,59 +122,58 @@ class CubitClass extends Cubit<AppState> {
 
   List<Movie> searchedMovie = [];
 
+  /// Searches for movies by a given keyword.
   void searchMovies({required String word}) {
-    searchedMovie.clear(); // Clear previous search results
+    searchedMovie.clear();
     DioHelper.getData('viewsets/movies/', queryParameters: {'search': word})
         .then((value) {
       for (var item in value!.data!) {
-        var movie = Movie.fromJson(
-            item); // Convert each search result to a Movie object
-        searchedMovie.add(movie); // Add the result to the search results list
+        searchedMovie.add(Movie.fromJson(item));
       }
-      emit(
-          SearchMovieSuccess()); // Emit success state when search is successful
+      emit(SearchMovieSuccess());
     }).catchError((e) {
-      emit(SearchMovieError(
-          error: e.toString())); // Emit error state if search fails
+      emit(SearchMovieError(error: e.toString()));
     });
   }
 
-  // Main page state management variables and methods
-  bool isSearchingMovie = false; // Track if search mode is active
-  bool cornerExpanded = false; // Track if corner UI component is expanded
-  bool empExpanded = false; // Track if another UI component is expanded
+  bool isSearchingMovie = false;
+  bool cornerExpanded = false;
+  bool empExpanded = false;
 
-  // Method to toggle search mode
+  /// Toggles the movie search mode.
   movieSearch() {
-    isSearchingMovie = !isSearchingMovie; // Toggle search mode
-    emit(IsSearching()); // Emit the state change
+    isSearchingMovie = !isSearchingMovie;
+    emit(IsSearching());
   }
 
   bool isSearchReservation = false;
 
+  /// Toggles the reservation search mode.
   reservationSearch() {
-    isSearchReservation = !isSearchReservation; // Toggle search mode
-    emit(IsSearching()); // Emit the state change
+    isSearchReservation = !isSearchReservation;
+    emit(IsSearching());
   }
 
-  // Method to toggle the corner UI component expansion
+  /// Expands or collapses the corner section.
   agCornerExpanded() {
-    cornerExpanded = !cornerExpanded; // Toggle expansion of corner component
-    emit(CornerExpanded()); // Emit the state change
+    cornerExpanded = !cornerExpanded;
+    emit(CornerExpanded());
   }
 
-  // Method to toggle Employee Details UI component expansion
+  /// Expands or collapses the employee section.
   agEmpExpanded() {
-    empExpanded = !empExpanded; // Toggle expansion of emp component
-    emit(EmpExpanded()); // Emit the state change
+    empExpanded = !empExpanded;
+    emit(EmpExpanded());
   }
 
-  Future<void> addReservation(
-      {required Movie movie,
-      required String name,
-      required int age,
-      required List<String> seats,
-      required int reservations}) async {
+  /// Adds a new reservation with the provided details.
+  Future<void> addReservation({
+    required Movie movie,
+    required String name,
+    required int age,
+    required List<String> seats,
+    required int reservations,
+  }) async {
     await DioHelper.postData(methodUrl: 'viewsets/reservations/', data: {
       "movie": {
         "name": movie.name,
@@ -228,14 +198,11 @@ class CubitClass extends Cubit<AppState> {
       emit(ReservedSuccess());
     }).catchError((e) {
       emit(ReservedError(e.toString()));
-      if (kDebugMode) {
-        print('Error: ${e.toString()}');
-      }
+      if (kDebugMode) print('Error: ${e.toString()}');
     });
   }
 
-  // edit movie >>
-
+  /// Edits the movie details and updates the backend.
   Future<void> editMovie({
     required String name,
     required String date,
@@ -255,9 +222,8 @@ class CubitClass extends Cubit<AppState> {
       'time': time,
       'hall': hall,
       'seats': seats,
-      'Available Seats': availableSeats,
+      'available_seats': seats - reservedSeats.length,
       'ticket_price': ticketPrice,
-      'reservations': movie.reservations,
       'photo': photo,
       'reservedSeats': reservedSeats
     }).then((value) {
@@ -268,8 +234,7 @@ class CubitClass extends Cubit<AppState> {
     });
   }
 
-  //add Movie
-
+  /// Adds a new movie to the backend.
   Future<void> addMovie({
     required String name,
     required String date,
@@ -297,7 +262,7 @@ class CubitClass extends Cubit<AppState> {
     });
   }
 
-  //delete movie
+  /// Deletes a movie and its related reservations from the backend.
   deleteMovie({required Movie movie}) {
     filterReservationsByMovie(movie.id!).then((value) async {
       for (Reservation reservation in filteredReservations) {
@@ -308,9 +273,7 @@ class CubitClass extends Cubit<AppState> {
             getMovies();
             emit(DeleteMovieSuccess());
           }).catchError((e) {
-            if (kDebugMode) {
-              print('Error : ${e.toString()}');
-            }
+            if (kDebugMode) print('Error: ${e.toString()}');
             emit(DeleteMovieError());
           });
         });
@@ -318,17 +281,17 @@ class CubitClass extends Cubit<AppState> {
     });
   }
 
-  //photo handling
-
   bool isUploading = false;
   File? movieImage;
   String? movieImageUrl;
 
+  /// Toggles the upload state for a movie image.
   void isUploadingImage() {
-    isUploading = !isUploading; // Toggle upload state
-    emit(IsSearching()); // Emit state change
+    isUploading = !isUploading;
+    emit(IsSearching());
   }
 
+  /// Allows picking an image for the movie and uploads it.
   Future<void> imagePicker({required Movie movie}) async {
     if (Platform.isWindows) {
       final result = await FilePicker.platform.pickFiles(
@@ -342,27 +305,22 @@ class CubitClass extends Cubit<AppState> {
         await uploadBackgroundPhoto(image: movieImage, movie: movie);
         emit(GetMovieImageUrlSuccess());
       } else {
-        if (kDebugMode) {
-          print('No Image Selected');
-        }
+        if (kDebugMode) print('No Image Selected');
         emit(GetMovieImageUrlFailed());
       }
-    } else {
-      // Handle image picking for mobile or other platforms if necessary
     }
   }
 
-  Future<void> uploadBackgroundPhoto(
-      {required File? image, required Movie movie}) async {
-    // if (movie.photo != null) {
-    //   await _deletePreviousPhoto(image: movie.photo!);
-    // }
-
+  Future<void> uploadBackgroundPhoto({
+    required File? image,
+    required Movie movie,
+  }) async {
+    // Uploads the background photo to Firebase Storage
     if (image == null) return;
 
     await FirebaseStorage.instance
         .ref(
-            'movies/photos/movie_id_:${movie.id}${Uri.file(image.path).pathSegments.last}')
+        'movies/photos/movie_id_:${movie.id}${Uri.file(image.path).pathSegments.last}')
         .putFile(image)
         .then((value) {
       value.ref.getDownloadURL().then((url) {
@@ -380,7 +338,10 @@ class CubitClass extends Cubit<AppState> {
     });
   }
 
-  Future<void> _deletePreviousPhoto({required String image}) async {
+  Future<void> _deletePreviousPhoto({
+    required String image,
+  }) async {
+    // Deletes the previous photo from Firebase Storage
     try {
       await FirebaseStorage.instance.refFromURL(image).delete();
     } catch (error) {
@@ -392,27 +353,18 @@ class CubitClass extends Cubit<AppState> {
 
   double? parseDouble(String text) {
     try {
-      // إزالة أي مسافات بيضاء حول النص
-      String trimmedText = text.trim();
+      // Parse the string to a double value
+      String trimmedText = text.trim().replaceAll(',', '.');
 
-      // استبدال الفواصل بالنقاط
-      trimmedText = trimmedText.replaceAll(',', '.');
-
-      // تحقق إذا كان النص ليس فارغًا
       if (trimmedText.isEmpty) {
         print('Error: Empty input');
         return null;
       }
 
-      // محاولة تحويل النص إلى double
       double value = double.parse(trimmedText);
-
-      // التحقق من القيم
       print('Parsed value: $value');
-
       return value;
     } catch (e) {
-      // في حالة حدوث خطأ، يمكنك التعامل مع الاستثناء هنا (مثل تسجيل الأخطاء)
       print('Error parsing double: $e');
       return null;
     }
@@ -421,6 +373,7 @@ class CubitClass extends Cubit<AppState> {
   File? newMovieImage;
   String? newMovieImageUrl;
 
+  /// Picks a new image from the device
   Future<void> pickNewImage() async {
     emit(PickingNewImage());
     final result = await FilePicker.platform.pickFiles(
@@ -439,16 +392,15 @@ class CubitClass extends Cubit<AppState> {
     }
   }
 
+  /// Uploads the selected image to Firebase Storage
   Future<void> uploadMoviePhoto(File newMovieImage) async {
     try {
       String fileName = Uri.file(newMovieImage.path).pathSegments.last;
       Reference storageReference =
-          FirebaseStorage.instance.ref().child('movies/$fileName');
+      FirebaseStorage.instance.ref().child('movies/$fileName');
 
-      // رفع الصورة إلى Firebase Storage
       UploadTask uploadTask = storageReference.putFile(newMovieImage);
 
-      // الحصول على رابط التحميل للصورة
       await uploadTask.whenComplete(() async {
         newMovieImageUrl = await storageReference.getDownloadURL();
         isUploadingImage();
@@ -469,23 +421,27 @@ class CubitClass extends Cubit<AppState> {
     }
   }
 
-  Future<void> generateAndPrintPDF(
-      {required String name,
-      required String totalPayment,
-      required String ticketPrice,
-      required List<String> seats,
-      required String movieTitle,
-      required String hall,
-      required String reservationCode}) async {
+  /// Generates a PDF ticket and opens it
+  Future<void> generateAndPrintPDF({
+    required String name,
+    required String totalPayment,
+    required String ticketPrice,
+    required List<String> seats,
+    required String movieTitle,
+    required String hall,
+    required String reservationCode,
+  }) async {
     final pdf = pdfFile.Document();
-    // تحميل الصورة من assets كـ Uint8List
+
     final ByteData imageData =
-        await rootBundle.load('assets/images/just4prog.png');
+    await rootBundle.load('assets/images/just4prog.png');
     final Uint8List imageBytes = imageData.buffer.asUint8List();
 
-    // تحويل الصورة إلى MemoryImage
     final image = pdfFile.MemoryImage(imageBytes);
-    final logo = pdfFile.SizedBox(width: AppDimensions.d300 , height: AppDimensions.d150 , child: pdfFile.Image(image));
+    final logo = pdfFile.SizedBox(
+        width: AppDimensions.d300,
+        height: AppDimensions.d150,
+        child: pdfFile.Image(image));
 
     pdf.addPage(
       pdfFile.Page(
@@ -493,21 +449,20 @@ class CubitClass extends Cubit<AppState> {
           child: pdfFile.Column(
             crossAxisAlignment: pdfFile.CrossAxisAlignment.start,
             children: [
-              pdfFile.Center(child:logo ),
+              pdfFile.Center(child: logo),
               pdfFile.SizedBox(height: 10),
-              pdfFile.Row(
+              pdfFile.Row(crossAxisAlignment: pdfFile.CrossAxisAlignment.start, children: [
+                pdfFile.Column(
                   crossAxisAlignment: pdfFile.CrossAxisAlignment.start,
                   children: [
-                      pdfFile.Column(
-                          crossAxisAlignment: pdfFile.CrossAxisAlignment.start,
-                          children: [
-                            pdfFile.Text('Movie: $movieTitle'),
-                            pdfFile.Text('Name: $name'),
-                            pdfFile.Text('Seats: $seats'),
-                            pdfFile.Text('Total Payment: $totalPayment \$'),
-                            pdfFile.Text('Reservation Code: $reservationCode'),
-                          ]),
-                  ]),
+                    pdfFile.Text('Movie: $movieTitle'),
+                    pdfFile.Text('Name: $name'),
+                    pdfFile.Text('Seats: $seats'),
+                    pdfFile.Text('Total Payment: $totalPayment \$'),
+                    pdfFile.Text('Reservation Code: $reservationCode'),
+                  ],
+                ),
+              ]),
             ],
           ),
         ),
@@ -524,30 +479,35 @@ class CubitClass extends Cubit<AppState> {
     }
   }
 
+  bool isEditingGuest = false;
 
-  bool isEditingGuest = false ;
-  editingGuest(){
+  /// Toggles the guest editing mode
+  editingGuest() {
     isEditingGuest = !isEditingGuest;
     emit(EditingGuest());
   }
+
+  /// Updates a guest's reservation and adjusts the movie's reserved seats
   Future<void> updateReservation({
     required String? fullName,
     required int? reservations,
     required int? age,
     required List<String>? seats,
     required Reservation reservation,
-    required int? movieId
+    required int? movieId,
   }) async {
-    // 1. إزالة المقاعد القديمة الخاصة بالضيف من القائمة المحجوزة في الفيلم
+    // Remove old seats from the reserved list
     for (String item in reservation.guest!.seats!) {
       reservation.movie!.reservedSeats!.removeWhere((seat) => seat == item);
     }
 
-    // 2. دمج المقاعد الجديدة مع المقاعد المحجوزة الأخرى (تجنب التكرار)
-    List<String> newReservedSeats = List.from(reservation.movie!.reservedSeats!);
-    newReservedSeats.addAll(seats!.where((seat) => !newReservedSeats.contains(seat)));
+    // Add new seats, avoiding duplicates
+    List<String> newReservedSeats =
+    List.from(reservation.movie!.reservedSeats!);
+    newReservedSeats
+        .addAll(seats!.where((seat) => !newReservedSeats.contains(seat)));
 
-    // 3. إرسال الطلب لتحديث الحجز
+    // Update the reservation details
     await DioHelper.putData(
       methodUrl: 'viewsets/reservations/${reservation.reservationId}/',
       data: {
@@ -560,7 +520,7 @@ class CubitClass extends Cubit<AppState> {
           "seats": reservation.movie!.seats,
           "photo": reservation.movie!.photo,
           "ticket_price": reservation.movie!.ticketPrice,
-          "reservedSeats": newReservedSeats, // استخدم القائمة المحدثة هنا
+          "reservedSeats": newReservedSeats,
         },
         "guest": {
           "id": reservation.guest!.id,
@@ -578,7 +538,7 @@ class CubitClass extends Cubit<AppState> {
       emit(UpdateReservationSuccess());
     }).catchError((e) {
       emit(UpdateReservationError(error: e));
-      print('Error edit guest : ${e.toString()}');
+      print('Error editing guest: ${e.toString()}');
     });
   }
 
